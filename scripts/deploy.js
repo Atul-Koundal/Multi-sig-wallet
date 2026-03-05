@@ -10,8 +10,8 @@ async function main() {
   console.log("═══════════════════════════════════════");
   console.log(`  Network  : ${network.name}`);
   console.log(`  Deployer : ${deployer.address}`);
-  console.log(`  Balance  : ${ethers.utils.formatEther(
-    await deployer.getBalance()
+ console.log(`  Balance  : ${ethers.formatEther(
+    await ethers.provider.getBalance(deployer.address)
   )} ETH`);
   console.log("═══════════════════════════════════════\n");
 
@@ -31,19 +31,21 @@ async function main() {
   owners.forEach((o, i) => console.log(`    [${i}] ${o}`));
   console.log(`  Required : ${required}\n`);
 
-  // ── Deploy Factory ───────────────────────────────────────────────────────
+ // ── Deploy Factory ───────────────────────────────────────────────────────
   console.log("⏳ Deploying MultiSigWalletFactory...");
   const Factory = await ethers.getContractFactory("MultiSigWalletFactory");
   const factory = await Factory.deploy();
-  await factory.deployed();
-  console.log(`✅ Factory deployed → ${factory.address}`);
+  await factory.waitForDeployment();
+  console.log(`✅ Factory deployed → ${factory.target}`);
 
   // ── Deploy Wallet via Factory ────────────────────────────────────────────
   console.log("\n⏳ Creating MultiSigWallet via factory...");
   const tx = await factory.createWallet(owners, required);
   const receipt = await tx.wait();
 
-  const event = receipt.events.find((e) => e.event === "WalletCreated");
+  const event = receipt.logs
+    .map((log) => { try { return factory.interface.parseLog(log); } catch { return null; } })
+    .find((e) => e?.name === "WalletCreated");
   const walletAddress = event.args.wallet;
   console.log(`✅ MultiSigWallet deployed → ${walletAddress}`);
 
@@ -52,7 +54,7 @@ async function main() {
   console.log("\n── Verification ───────────────────────");
   console.log(`  Owners   : ${(await wallet.getOwners()).length}`);
   console.log(`  Required : ${await wallet.required()}`);
-  console.log(`  Balance  : ${ethers.utils.formatEther(
+  console.log(`  Balance  : ${ethers.formatEther(
     await ethers.provider.getBalance(walletAddress)
   )} ETH`);
   console.log("───────────────────────────────────────\n");
@@ -62,12 +64,12 @@ async function main() {
   if (!fs.existsSync(deploymentsDir)) fs.mkdirSync(deploymentsDir);
 
   const deploymentData = {
-    factory: factory.address,
+    factory: factory.target,
     wallet: walletAddress,
     owners,
     required,
     deployer: deployer.address,
-    txHash: receipt.transactionHash,
+    txHash: receipt.hash,
     blockNumber: receipt.blockNumber,
     timestamp: new Date().toISOString(),
   };

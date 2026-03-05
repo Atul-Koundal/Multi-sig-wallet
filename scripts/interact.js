@@ -34,7 +34,7 @@ async function main() {
       const txCount = await wallet.getTransactionCount();
 
       console.log("📊 Wallet Status");
-      console.log(`  Balance  : ${ethers.utils.formatEther(balance)} ETH`);
+      console.log(`  Balance  : ${ethers.formatEther(balance)} ETH`);
       console.log(`  Required : ${required} / ${owners.length}`);
       console.log(`  Owners   :`);
       owners.forEach((o, i) => console.log(`    [${i}] ${o}`));
@@ -44,7 +44,7 @@ async function main() {
     case "submit": {
       const tx = await wallet.submitTransaction(
         SUBMIT_PARAMS.to,
-        ethers.utils.parseEther(SUBMIT_PARAMS.value),
+        ethers.parseEther(SUBMIT_PARAMS.value),
         SUBMIT_PARAMS.data
       );
       const receipt = await tx.wait();
